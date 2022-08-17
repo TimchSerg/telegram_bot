@@ -1,5 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CommandsService } from './services/commands/commands.service';
+import { MessageService } from './services/message/message.service';
 
 @Injectable()
 export class BotService implements OnModuleInit{
@@ -7,7 +9,9 @@ export class BotService implements OnModuleInit{
   private token: string;
 
   constructor(
-    private configService: ConfigService
+    private configService: ConfigService,
+    private messageService: MessageService,
+    private commandsService: CommandsService
   ) {
     process.env.NTBA_FIX_319 = '1';
     const TelegramBot = require('node-telegram-bot-api');
@@ -23,31 +27,13 @@ export class BotService implements OnModuleInit{
   botMessage() {
   
     this.bot.on('message', (msg) => {
-      let Hi = "hi";
-      if (msg.text.toString().toLowerCase().indexOf(Hi) === 0) {
-        this.bot.sendMessage(msg.from.id, "Hello " + msg.from.first_name + " what would you like to know about me ?");
-      }
-      
-      let response = "Who are you";
-      if (msg.text.toString().toLowerCase().includes("who")) {
-        this.bot.sendMessage(msg.chat.id, "I am an intelligent telegram robot, built with Nest.js. Thanks for asking");
-      }
-      
-      let response2 = "Do you love JavaScript";
-      if (msg.text.toString().toLowerCase().includes("javascript")) {
-        this.bot.sendMessage(msg.from.id, "Oh, did I hear you say JavaScript? \n I really love JavaScript");
-        this.botQuotes(msg.from.id);
-      }
+      const answer = this.messageService.getMessage(msg.text.toString())
+      if(msg.text.toString()[0] !== "/") 
+        this.bot.sendMessage(msg.from.id, answer);
     });
 
-    this.bot.onText(/\/date/, (msg, match) => {
-      var userId = msg.from.id;
-      this.botQuotes(userId);
-    });
-  }
-
-  botQuotes(userId: number) {
-    this.bot.sendMessage(userId, `Текущая дата: ${new Date()}`);
+    this.bot.onText(/\/date/, (...props: any) => this.commandsService.getDate(props, this.bot));
+    this.bot.onText(/\/quote/, (...props: any) => this.commandsService.getQuotes(props, this.bot));
   }
 
 }
